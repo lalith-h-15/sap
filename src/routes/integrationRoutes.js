@@ -74,7 +74,18 @@ export function buildEvidencePackage(context, { mapping = null, now = new Date()
   };
 }
 
-// ---- 3. The route ----
+// ---- 3. Lookup by MeritLens employee ID (used by the MeritLens import) ----
+// Returns the packet ONLY for a verified mapping. Pending or missing mappings look identical
+// (null) so the endpoint cannot be used to probe which employees exist.
+export async function packetForMeritLensEmployee(meritLensEmployeeId, models = { IdentityMapping, EmployeeContext }) {
+  const mapping = await models.IdentityMapping.findOne({ meritLensEmployeeId, status: 'verified' }).lean();
+  if (!mapping) return null;
+  const context = await models.EmployeeContext.findOne({ externalEmployeeId: mapping.careerOrchestratorUserId }).lean();
+  if (!context) return null;
+  return buildEvidencePackage(context, { mapping });
+}
+
+// ---- 4. The routes ----
 const router = Router();
 router.use(requireServiceKey);
 
@@ -84,6 +95,16 @@ router.get('/meritlens/employees/:employeeId/evidence-package', async (req, res,
     if (!context) throw new HttpError(404, 'Employee context not found');
     const mapping = await IdentityMapping.findOne({ careerOrchestratorUserId: req.params.employeeId }).lean();
     res.json({ success: true, data: buildEvidencePackage(context, { mapping }) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/meritlens/by-meritlens-id/:meritLensEmployeeId/evidence-package', async (req, res, next) => {
+  try {
+    const data = await packetForMeritLensEmployee(req.params.meritLensEmployeeId);
+    if (!data) throw new HttpError(404, 'No verified mapping found');
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }
