@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import authRoutes from './routes/authRoutes.js';
 import orchestratorRoutes from './routes/orchestratorRoutes.js';
+import integrationRoutes from './routes/integrationRoutes.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
@@ -66,6 +67,9 @@ app.use('/api/v1/auth', authRoutes);
 
 // Career Orchestrator routes
 app.use('/api/v1/orchestrator', orchestratorRoutes);
+
+// Service-to-service integration (MeritLens)
+app.use('/api/v1/integration', integrationRoutes);
 
 // Error handling MUST come after all application routes
 app.use(notFound);
